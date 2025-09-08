@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ルーレット</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div class="app">
+<header>
+<h1>ルーレット</h1>
+</header>
+
+
+<main>
+<div class="wheel-wrap">
+<canvas id="wheel" width="600" height="600"></canvas>
+<div class="pointer">▼</div>
+</div>
+
+
+<aside class="controls">
+<label for="segmentsInput">区画（カンマ区切り）</label>
+<textarea id="segmentsInput" rows="6">00,32,15,19,4,21,2,25,17,34,6,27,13,36,11,30,8,23,10,5,24,16,33,1,20,14,31,9,22,18,29,7,28,12,35,3,26,0</textarea>
+
+
+<div class="options">
+<button id="spinBtn">Spin</button>
+<button id="stopBtn" disabled>Stop</button>
+</div>
+
+
+<div id="meta">
+<div>分割数: <span id="count">0</span></div>
+<div id="result">結果: —</div>
+</div>
+
+
+<p class="hint">※ "0" , "00" は自動的に緑色になる。</p>
+</aside>
+</main>
+</div>
+
+
+<script src="script.js"></script>
+</body>
+</html>
