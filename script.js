@@ -1,4 +1,3 @@
-// 改良版 script.js ――― そのまま上書きして使って
 (function(){
   'use strict';
 
@@ -20,11 +19,13 @@
   let rotation = 0;
   let animRequest = null;
   let spinning = false;
+  // バッジはグローバルで共通に使う
+  const badge = ["🔶","🔷"];
 
   function parseSegments(){
-    const raw = segmentsInput.value.split(',').map(s=>s.trim()).filter(Boolean);
+    const raw = (segmentsInput && segmentsInput.value ? segmentsInput.value : '').split(',').map(s=>s.trim()).filter(Boolean);
     segments = raw.length ? raw : ['0','1'];
-    countEl && (countEl.textContent = segments.length);
+    if(countEl) countEl.textContent = segments.length;
   }
 
   function getColorForLabel(label, i){
@@ -33,19 +34,13 @@
   }
 
   function ensureCanvasSize(){
-    // CSS が適用された後の実寸を取る（フォールバック値込み）
     const dpr = window.devicePixelRatio || 1;
-    // prefer clientWidth/clientHeight; if zero, fallback to bounding rect or fixed 600
     let W = canvas.clientWidth || Math.floor(canvas.getBoundingClientRect().width) || 600;
     let H = canvas.clientHeight || Math.floor(canvas.getBoundingClientRect().height) || 600;
-
-    // 最低限の安全サイズ
     W = Math.max(20, W);
     H = Math.max(20, H);
-
     canvas.width = Math.floor(W * dpr);
     canvas.height = Math.floor(H * dpr);
-    // CSS 上のスケーリングを合わせる
     ctx.setTransform(dpr,0,0,dpr,0,0);
     return { W, H };
   }
@@ -78,7 +73,6 @@
         ctx.textAlign = 'right';
         ctx.fillStyle = 'white';
         ctx.font = Math.max(12, r * 0.07) + 'px sans-serif';
-        // ラベルがはみ出す時は短くする
         const label = String(segments[i] ?? '');
         ctx.fillText(label, r - 10, 6);
         ctx.restore();
@@ -96,26 +90,30 @@
 
   function easeOutCubic(t){ return 1 - Math.pow(1 - t, 3); }
 
+  // 修正済み: 着地インデックスの計算を安定化（startOffset はキャンセルされるので不要）
   function getLandedIndex(){
     const n = segments.length || 1;
     const seg = Math.PI*2 / n;
-    const startOffset = -Math.PI/2;
-    const val = - (rotation + startOffset) / seg - 0.5;
-    let idx = Math.round(val) % n;
-    if(idx < 0) idx += n;
+    // rotation を標準化しておく（どんな大きさでも動作するように）
+    let rot = rotation % (Math.PI * 2);
+    if(rot < 0) rot += Math.PI * 2;
+    // 式: i = floor( -rotation / seg ) mod n
+    let idx = Math.floor((-rot) / seg);
+    idx = ((idx % n) + n) % n;
     return idx;
   }
 
   function spinToIndex(targetIndex, rotations){
     if(spinning) return;
     spinning = true;
-    stopBtn.disabled = false;
-    spinBtn.disabled = true;
+    if(stopBtn) stopBtn.disabled = false;
+    if(spinBtn) spinBtn.disabled = true;
 
     const n = segments.length;
     const seg = Math.PI*2 / n;
     const baseTarget = - (targetIndex + 0.5) * seg;
     let finalRotation = baseTarget + rotations * Math.PI * 2;
+    // 最終回転が現在の回転より小さいなら 2π 足す
     while(finalRotation <= rotation) finalRotation += Math.PI * 2;
 
     const startRotation = rotation;
@@ -131,10 +129,10 @@
         animRequest = requestAnimationFrame(animate);
       } else {
         spinning = false;
-        spinBtn.disabled = false;
-        stopBtn.disabled = true;
+        if(spinBtn) spinBtn.disabled = false;
+        if(stopBtn) stopBtn.disabled = true;
         const landedIndex = getLandedIndex();
-        resultEl.textContent = '結果: ' + segments[landedIndex];
+        if(resultEl) resultEl.textContent = '結果: ' + badge[landedIndex % 2] + segments[landedIndex];
         console.log('Spin finished. index=', landedIndex, 'label=', segments[landedIndex]);
       }
     }
@@ -146,13 +144,15 @@
     try{
       parseSegments();
       if(!segments.length){
-        resultEl.textContent = '区画を指定してください';
+        if(resultEl) resultEl.textContent = '区画を指定してください';
         return;
       }
       const n = segments.length;
       const target = Math.floor(Math.random() * n);
+      rotation = rotation % (Math.PI * 2);
+      if(rotation < 0) rotation += Math.PI * 2;
       const rotations = Math.floor(Math.random() * 6) + 6;
-      resultEl.textContent = '回転中...';
+      if(resultEl) resultEl.textContent = '回転中...';
       spinToIndex(target, rotations);
     }catch(err){
       console.error('Spin エラー:', err);
@@ -162,7 +162,8 @@
   // Stop: 途中で早く止める機能
   function onStopClick(){
     if(!spinning) return;
-    cancelAnimationFrame(animRequest);
+    if(animRequest) cancelAnimationFrame(animRequest);
+    // 安全に現在のインデックスを取る
     const n = segments.length;
     const seg = Math.PI*2 / n;
     const currentIdx = getLandedIndex();
@@ -174,7 +175,7 @@
     while(finalRotation <= rotation) finalRotation += Math.PI * 2;
     const startRotation = rotation;
     const delta = finalRotation - startRotation;
-    const duration = 900;
+    const duration = 9900;
     const startTime = performance.now();
 
     function animate(now){
@@ -185,10 +186,10 @@
         animRequest = requestAnimationFrame(animate);
       } else {
         spinning = false;
-        spinBtn.disabled = false;
-        stopBtn.disabled = true;
+        if(spinBtn) spinBtn.disabled = false;
+        if(stopBtn) stopBtn.disabled = true;
         const landedIndex = getLandedIndex();
-        resultEl.textContent = '結果: ' + segments[landedIndex];
+        if(resultEl) resultEl.textContent = '結果: ' + badge[landedIndex % 2] + segments[landedIndex];
       }
     }
     animRequest = requestAnimationFrame(animate);
@@ -197,17 +198,14 @@
   // 初期化は load イベントで行う（CSS とレイアウトが全部反映された後）
   window.addEventListener('load', ()=>{
     try{
-      // attach handlers
       spinBtn && spinBtn.addEventListener('click', onSpinClick);
       stopBtn && stopBtn.addEventListener('click', onStopClick);
-      segmentsInput && segmentsInput.addEventListener('input', ()=>{ parseSegments(); drawWheel(); resultEl.textContent = '結果: —'; });
+      segmentsInput && segmentsInput.addEventListener('input', ()=>{ parseSegments(); drawWheel(); if(resultEl) resultEl.textContent = '結果: —'; });
 
-      // parse, draw
       parseSegments();
       rotation = 0;
       drawWheel();
 
-      // リサイズ対応（慎重に）
       let resizeTimeout = null;
       window.addEventListener('resize', ()=>{
         clearTimeout(resizeTimeout);
