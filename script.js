@@ -60,6 +60,17 @@
         const a1 = a0 + seg;
         ctx.beginPath();
         ctx.moveTo(cx,cy);
+        ctx.arc(cx,cy,r*1.05,a0,a1,false);
+        ctx.closePath();
+        ctx.fillStyle = Math.floor(i/(segments.length/5.7)) % 2 === 0 ? '#6a4421ff' : '#845c3c';
+        ctx.fill();
+      }
+
+      for(let i=0;i<n;i++){
+        const a0 = startOffset + i*seg + rotation;
+        const a1 = a0 + seg;
+        ctx.beginPath();
+        ctx.moveTo(cx,cy);
         ctx.arc(cx,cy,r,a0,a1,false);
         ctx.closePath();
         ctx.fillStyle = getColorForLabel(segments[i], i);
@@ -79,10 +90,63 @@
       }
 
       // 中心丸（視認性）
+      
       ctx.beginPath();
-      ctx.arc(cx,cy, Math.max(6, r*0.12), 0, Math.PI*2);
-      ctx.fillStyle = '#111827aa';
+      ctx.arc(cx,cy, Math.max(12, r*0.85), 0, Math.PI*2);
+      ctx.fillStyle = '#11182742';
+      ctx.strokeStyle = '#945c28ff';
+      ctx.lineWidth = 3;
+      ctx.stroke();
       ctx.fill();
+
+      for(let i=0;i<n;i++){
+        const a0 = startOffset + i*seg + rotation;
+        const a1 = a0 + seg;
+        ctx.beginPath();
+        ctx.moveTo(cx,cy);
+        ctx.arc(cx,cy,r*0.7,a0,a1,false);
+        ctx.closePath();
+        ctx.fillStyle = Math.floor(i/(segments.length/6)) % 2 === 0 ? '#6a4421ff' : '#845c3c';
+        ctx.fill();
+      }
+
+      ctx.beginPath();
+      ctx.arc(cx,cy, Math.max(12, r*0.3), 0, Math.PI*2);
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = '#a79429ff';
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(cx,cy, Math.max(12, r*0.2), 0, Math.PI*2);
+      ctx.fillStyle = '#a79429ff';
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(cx,cy, Math.max(12, r*0.1), 0, Math.PI*2);
+      ctx.fillStyle = '#ffff00ff';
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.strokeStyle = '#ffff00ff';
+      ctx.moveTo(cx-110*Math.sin(-rotation+Math.PI/2),cy-110*Math.cos(-rotation+Math.PI/2));
+      ctx.lineWidth = 15
+      ctx.lineTo(cx+110*Math.sin(-rotation+Math.PI/2),cy+110*Math.cos(-rotation+Math.PI/2));
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.strokeStyle = '#ffff00ff';
+      ctx.moveTo(cx-110*Math.cos(rotation-Math.PI/2),cy-110*Math.sin(rotation-Math.PI/2));
+      ctx.lineWidth = 15
+      ctx.lineTo(cx+110*Math.cos(rotation-Math.PI/2),cy+110*Math.sin(rotation-Math.PI/2));
+      ctx.stroke();
+
+      for(let i = 0;i<4;i++){
+        ctx.beginPath();
+        ctx.arc(cx+110*Math.cos(rotation-Math.PI*(i*0.5)),cy+110*Math.sin(rotation-Math.PI*(i*0.5)), 15, 0, Math.PI*2);
+        ctx.fillStyle = '#ffff00ff';
+        ctx.fill();
+      }
+
     }catch(err){
       console.error('drawWheel 中にエラー:', err);
     }
@@ -90,7 +154,7 @@
 
   function easeOutCubic(t){ return 1 - Math.pow(1 - t, 3); }
 
-  // 修正済み: 着地インデックスの計算を安定化（startOffset はキャンセルされるので不要）
+  // 修正済み: 着地インデックスの計算を安定化（startOffset はキャンセルされるので不要）←ありがとう
   function getLandedIndex(){
     const n = segments.length || 1;
     const seg = Math.PI*2 / n;
@@ -118,11 +182,11 @@
 
     const startRotation = rotation;
     const delta = finalRotation - startRotation;
-    const duration = 2800 + rotations * 300;
+    const duration = 4800 + rotations * 300;
     const startTime = performance.now();
 
     function animate(now){
-      const t = Math.min(1, (now - startTime) / duration);
+      const t = Math.min(1, (now - startTime) / duration * 0.6);
       rotation = startRotation + delta * easeOutCubic(t);
       drawWheel();
       if(t < 1){
@@ -132,7 +196,7 @@
         if(spinBtn) spinBtn.disabled = false;
         if(stopBtn) stopBtn.disabled = true;
         const landedIndex = getLandedIndex();
-        if(resultEl) resultEl.textContent = '結果: ' + badge[landedIndex % 2] + segments[landedIndex];
+        if(resultEl) resultEl.textContent = '結果: ' + (segments[landedIndex] == 0 ?"🟩":badge[landedIndex % 2]) + segments[landedIndex];
         console.log('Spin finished. index=', landedIndex, 'label=', segments[landedIndex]);
       }
     }
@@ -175,7 +239,7 @@
     while(finalRotation <= rotation) finalRotation += Math.PI * 2;
     const startRotation = rotation;
     const delta = finalRotation - startRotation;
-    const duration = 9900;
+    const duration = 2500;
     const startTime = performance.now();
 
     function animate(now){
