@@ -19,8 +19,10 @@
   let rotation = 0;
   let animRequest = null;
   let spinning = false;
-  // バッジはグローバルで共通に使う
   const badge = ["🔶","🔷"];
+
+  // ★ 次に出る予定を保持
+  let nextTarget = null;
 
   function parseSegments(){
     const raw = (segmentsInput && segmentsInput.value ? segmentsInput.value : '').split(',').map(s=>s.trim()).filter(Boolean);
@@ -76,7 +78,6 @@
         ctx.fillStyle = getColorForLabel(segments[i], i);
         ctx.fill();
 
-        // ラベル描画
         ctx.save();
         ctx.translate(cx,cy);
         const angle = startOffset + (i+0.5)*seg + rotation;
@@ -89,8 +90,6 @@
         ctx.restore();
       }
 
-      // 中心丸（視認性）
-      
       ctx.beginPath();
       ctx.arc(cx,cy, Math.max(12, r*0.85), 0, Math.PI*2);
       ctx.fillStyle = '#11182742';
@@ -154,14 +153,11 @@
 
   function easeOutCubic(t){ return 1 - Math.pow(1 - t, 3); }
 
-  // 修正済み: 着地インデックスの計算を安定化（startOffset はキャンセルされるので不要）←ありがとう
   function getLandedIndex(){
     const n = segments.length || 1;
     const seg = Math.PI*2 / n;
-    // rotation を標準化しておく（どんな大きさでも動作するように）
     let rot = rotation % (Math.PI * 2);
     if(rot < 0) rot += Math.PI * 2;
-    // 式: i = floor( -rotation / seg ) mod n
     let idx = Math.floor((-rot) / seg);
     idx = ((idx % n) + n) % n;
     return idx;
@@ -177,7 +173,6 @@
     const seg = Math.PI*2 / n;
     const baseTarget = - (targetIndex + 0.5) * seg;
     let finalRotation = baseTarget + rotations * Math.PI * 2;
-    // 最終回転が現在の回転より小さいなら 2π 足す
     while(finalRotation <= rotation) finalRotation += Math.PI * 2;
 
     const startRotation = rotation;
@@ -203,7 +198,6 @@
     animRequest = requestAnimationFrame(animate);
   }
 
-  // イベント: Spin
   function onSpinClick(){
     try{
       parseSegments();
@@ -211,23 +205,44 @@
         if(resultEl) resultEl.textContent = '区画を指定してください';
         return;
       }
+
       const n = segments.length;
-      const target = Math.floor(Math.random() * n);
+      const target = (nextTarget !== null) ? nextTarget : Math.floor(Math.random() * n);
+
       rotation = rotation % (Math.PI * 2);
       if(rotation < 0) rotation += Math.PI * 2;
       const rotations = Math.floor(Math.random() * 6) + 6;
       if(resultEl) resultEl.textContent = '回転中...';
       spinToIndex(target, rotations);
+
+      // 次回の予告を決めて表示
+      nextTarget = Math.floor(Math.random() * n);
+      const cheatEl = document.querySelector('.ikasama');
+      if (cheatEl) {
+        cheatEl.textContent = segments[nextTarget];
+      }
+
+      function sendToDiscord(result) {
+      const webhookURL = "https://discord.com/api/webhooks/1421058884784750593/8JI5vR02aEkha0_Gx3ZP4kfwOzGHcH5TgI53laU-ykN3ohitLuQraE1zizooZ6UTiWvN"; // さっきのURL
+      fetch(webhookURL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+        content: `次の出目: ${result}`
+        })
+      });
+      }
+
+      sendToDiscord(segments[nextTarget]);
+
     }catch(err){
       console.error('Spin エラー:', err);
     }
   }
 
-  // Stop: 途中で早く止める機能
   function onStopClick(){
     if(!spinning) return;
     if(animRequest) cancelAnimationFrame(animRequest);
-    // 安全に現在のインデックスを取る
     const n = segments.length;
     const seg = Math.PI*2 / n;
     const currentIdx = getLandedIndex();
@@ -259,7 +274,6 @@
     animRequest = requestAnimationFrame(animate);
   }
 
-  // 初期化は load イベントで行う（CSS とレイアウトが全部反映された後）
   window.addEventListener('load', ()=>{
     try{
       spinBtn && spinBtn.addEventListener('click', onSpinClick);
@@ -269,6 +283,14 @@
       parseSegments();
       rotation = 0;
       drawWheel();
+
+      // 初期の予告を決めて表示
+      const n = segments.length;
+      nextTarget = Math.floor(Math.random() * n);
+      const cheatEl = document.querySelector('.ikasama');
+      if (cheatEl) {
+        cheatEl.textContent = segments[nextTarget];
+      }
 
       let resizeTimeout = null;
       window.addEventListener('resize', ()=>{

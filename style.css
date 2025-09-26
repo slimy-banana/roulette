@@ -22,4 +22,5 @@ button:disabled{opacity:.5;cursor:not-allowed}
 #result{margin-top:8px;font-size:18px;font-weight:700}
 .hint{margin-top:12px;color:rgba(255,255,255,0.6);font-size:13px}
 footer{margin-top:14px;color:rgba(255,255,255,.45)}
+.ikasama{color: #0026ff1a;size: 2px;position: fixed;top: 0;}
 @media(max-width:900px){main{flex-direction:column}.wheel-wrap{width:100%;height:320px;flex:0 0 320px}}
